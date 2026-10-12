@@ -1,0 +1,32 @@
+## **Bài 8: Debug lỗi ghi đè dữ liệu do Redirection**
+### **Phần 1: Phân tích lỗi**
+
+1. **Các dòng lệnh gây mất dữ liệu lịch sử:**
+* Lệnh ở dòng thứ 2 (`Select-String ... | Out-File weekly_errors.txt`) và dòng thứ 3 (`"..." | Out-File weekly_errors.txt`) đang sử dụng `Out-File` mặc định **mở ở chế độ ghi đè (Overwrite)**.
+* Lệnh ở dòng 3 chạy sau cùng sẽ xóa sạch toàn bộ nội dung đã ghi trước đó (bao gồm cả các dòng log vừa lọc được) và chỉ giữ lại đúng dòng kết thúc.
+
+
+2. **Nội dung còn sót lại trong file `weekly_errors.txt` sau mỗi lần chạy:**
+* Chỉ còn duy nhất 1 dòng văn bản thông báo kết thúc:
+`"[$(Get-Date)] --- Ket thuc quat ---"`
+
+
+### **Phần 2: Sửa lỗi và kiểm thử**
+3. **Phiên bản script đã sửa (sử dụng `-Append` để ghi nối tiếp):**
+# Script: hourly_log.ps1
+# Chạy mỗi giờ, cộng dồn lỗi vào weekly_errors.txt
+
+"[$(Get-Date)] --- Bat dau quat ---" | Out-File -Append weekly_errors.txt
+Select-String -Path app.log -Pattern "error" | Out-File -Append weekly_errors.txt
+"[$(Get-Date)] --- Ket thuc quat ---" | Out-File -Append weekly_errors.txt
+
+4. **Bảng so sánh `Out-File` (ghi đè) vs `Out-File -Append` / `Add-Content` (ghi nối):**
+1. Out-File (Mặc định - Ghi đè)
+Hành vi: Xóa sạch toàn bộ nội dung cũ có sẵn trong file trước khi ghi dữ liệu mới vào.
+
+Trường hợp sử dụng: Dùng khi muốn tạo mới hoàn toàn file log hằng ngày hoặc tạo file báo cáo mới.
+
+2. Out-File -Append hoặc Add-Content (Ghi nối tiếp)
+Hành vi: Giữ nguyên toàn bộ nội dung cũ và chèn thêm dữ liệu mới vào cuối file.
+
+Trường hợp sử dụng: Dùng khi ghi log liên tục, cộng dồn dữ liệu theo giờ, theo ngày hoặc theo tuần mà không làm mất lịch sử cũ.
